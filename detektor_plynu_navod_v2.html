@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESP32 Detektor plynu a dymu v2.0</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
+:root{--bg:#0e0f11;--panel:#16181d;--panel2:#1e2028;--border:#2a2d38;--orange:#ff6b2b;--red:#ff3b3b;--green:#2dff7a;--blue:#4d9eff;--yellow:#ffd166;--text:#e8eaf0;--muted:#8b8fa8;--mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.7}
+.hero{background:linear-gradient(135deg,#0e0f11 0%,#1a0d05 50%,#0e0f11 100%);border-bottom:1px solid var(--border);padding:3rem 1.5rem 2rem;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at 50% 0%,rgba(255,107,43,.15) 0%,transparent 70%)}
+.hero-icon{font-size:3rem;margin-bottom:.5rem;display:block;position:relative}
+.hero h1{font-size:clamp(1.4rem,5vw,2.1rem);font-weight:800;position:relative;background:linear-gradient(90deg,#ff6b2b,#ff3b3b,#ffd166);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{color:var(--muted);margin-top:.5rem;font-size:.9rem;position:relative}
+.tag{display:inline-block;border:1px solid var(--border);border-radius:4px;padding:.15rem .6rem;font-size:.72rem;font-family:var(--mono);margin:.2rem;color:var(--muted)}
+.tag.hot{border-color:rgba(255,107,43,.4);color:var(--orange);background:rgba(255,107,43,.06)}
+nav{background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;display:flex;flex-wrap:wrap;padding:0 .5rem}
+nav a{color:var(--muted);text-decoration:none;padding:.65rem .75rem;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap}
+nav a:hover{color:var(--orange);border-bottom-color:var(--orange)}
+.container{max-width:860px;margin:0 auto;padding:1.5rem 1rem 4rem}
+.section{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:1.5rem;margin-bottom:1.5rem}
+.section-header{display:flex;align-items:center;gap:.8rem;margin-bottom:1.2rem;padding-bottom:.8rem;border-bottom:1px solid var(--border)}
+.section-num{background:var(--orange);color:#000;font-weight:800;font-size:.8rem;width:1.8rem;height:1.8rem;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.section-header h2{font-size:1.1rem;font-weight:700}
+h3{font-size:.85rem;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.5px;margin:1.3rem 0 .6rem}
+h3:first-of-type{margin-top:0}
+p{color:#b8bcd0;margin-bottom:.7rem;font-size:.88rem}
+table{width:100%;border-collapse:collapse;font-size:.82rem;margin:.5rem 0 1rem}
+th{background:var(--panel2);color:var(--muted);font-weight:700;text-transform:uppercase;font-size:.68rem;letter-spacing:.5px;padding:.5rem .7rem;text-align:left}
+td{padding:.45rem .7rem;border-bottom:1px solid var(--border);color:#c0c3d4}
+tr:last-child td{border-bottom:none}
+td strong{color:var(--text)}
+td code{font-family:var(--mono);font-size:.78rem;color:var(--orange)}
+.alert{padding:.75rem 1rem;border-radius:6px;margin:.8rem 0;font-size:.84rem;display:flex;gap:.6rem;align-items:flex-start}
+.alert-icon{flex-shrink:0;font-size:1rem}
+.alert-body{flex:1}
+.alert-red{background:rgba(255,59,59,.1);border:1px solid rgba(255,59,59,.3);color:#ffaaaa}
+.alert-yellow{background:rgba(255,209,102,.1);border:1px solid rgba(255,209,102,.3);color:#ffe08a}
+.alert-green{background:rgba(45,255,122,.08);border:1px solid rgba(45,255,122,.25);color:#7effc2}
+.alert-blue{background:rgba(77,158,255,.1);border:1px solid rgba(77,158,255,.3);color:#a0c8ff}
+.step{display:flex;gap:.8rem;margin-bottom:.9rem;align-items:flex-start}
+.step-n{background:var(--panel2);border:1px solid var(--border);color:var(--orange);font-family:var(--mono);font-weight:700;font-size:.72rem;width:1.6rem;height:1.6rem;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.1rem}
+.step-body{flex:1;font-size:.86rem;color:#c0c3d4}
+.step-body strong{color:var(--text)}
+kbd{background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:.1rem .4rem;font-family:var(--mono);font-size:.76rem;color:var(--yellow);display:inline-block}
+.wiring-box{background:#090a0c;border:1px solid var(--border);border-radius:8px;padding:1.1rem;font-family:var(--mono);font-size:.76rem;line-height:1.9;margin:.5rem 0;overflow-x:auto;white-space:pre}
+.pin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:.5rem;margin:.6rem 0}
+.pin-card{background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:.55rem .8rem}
+.pin-card .gpio{font-family:var(--mono);color:var(--orange);font-weight:700;font-size:.82rem}
+.pin-card .comp-name{color:var(--muted);font-size:.7rem;margin-top:.1rem}
+.pin-card .note{color:#4a4e62;font-size:.66rem;margin-top:.15rem;font-style:italic}
+.code-wrapper{position:relative;margin:.5rem 0}
+.copy-btn{position:absolute;top:.6rem;right:.6rem;background:rgba(255,107,43,.15);border:1px solid rgba(255,107,43,.3);color:var(--orange);border-radius:5px;padding:.3rem .9rem;font-family:var(--mono);font-size:.72rem;cursor:pointer;transition:all .2s;z-index:2}
+.copy-btn:hover{background:var(--orange);color:#000}
+pre{background:#090a0c;border:1px solid var(--border);border-radius:8px;padding:1rem;overflow:auto;max-height:600px;font-family:var(--mono);font-size:.74rem;line-height:1.65;color:#cdd3e0}
+hr.div{border:none;border-top:1px solid var(--border);margin:1rem 0}
+footer{text-align:center;color:var(--muted);font-size:.73rem;padding:2rem 1rem 1rem;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <span class="hero-icon">🔥</span>
+  <h1>Detektor plynu a dymu – ESP32 NodeMCU <span style="font-size:.6em;opacity:.7">v2.0</span></h1>
+  <p>Kompletný návod od zapojenia po Telegram notifikácie</p>
+  <div style="margin-top:.8rem">
+    <span class="tag hot">MQ-2 DYM</span><span class="tag hot">MQ-4 ZEMNÝ PLYN</span><span class="tag hot">MQ-5 LPG</span>
+    <span class="tag">TELEGRAM BOT</span><span class="tag">REPRODUKTOR</span><span class="tag">LED</span><span class="tag">WiFi</span>
+  </div>
+</div>
+
+<nav>
+  <a href="#komponenty">📦 Komponenty</a>
+  <a href="#telegram">✈️ Telegram Bot</a>
+  <a href="#arduino">⚙️ Arduino IDE</a>
+  <a href="#zapojenie">🔌 Zapojenie</a>
+  <a href="#kod">💻 Kód</a>
+  <a href="#kalibracia">🎚️ Kalibrácia</a>
+  <a href="#start">🚀 Prvý štart</a>
+</nav>
+
+<div class="container">
+
+<!-- 1. KOMPONENTY -->
+<div class="section" id="komponenty">
+  <div class="section-header"><div class="section-num">1</div><h2>Komponenty – čo máte a čo dokúpiť</h2></div>
+
+  <h3>✅ Čo už máte</h3>
+  <table>
+    <tr><th>Súčiastka</th><th>Funkcia v projekte</th></tr>
+    <tr><td><strong>NodeMCU ESP32</strong></td><td>Hlavný mikrokontrolér s WiFi a Bluetooth</td></tr>
+    <tr><td><strong>MQ-2</strong></td><td>Detekcia dymu a spáleného jedla</td></tr>
+    <tr><td><strong>MQ-4</strong></td><td>Detekcia zemného plynu (metán / CNG)</td></tr>
+    <tr><td><strong>MQ-5</strong></td><td>Detekcia LPG (propán-bután)</td></tr>
+    <tr><td><strong>Reproduktor 8Ω 0,5W (#VYS427)</strong></td><td>Zvukový alarm</td></tr>
+    <tr><td><strong>4-pin tlačidlo s nástavcom</strong></td><td>Manuálne vypnutie zvuku</td></tr>
+    <tr><td><strong>USB nabíjačka 5V/2A</strong> (telefónna nabíjačka)</td><td>Napájanie celého systému — min. 2A kvôli odberu 3× MQ senzorov + ESP32 (~780 mA celkovo)</td></tr>
+  </table>
+
+  <h3>🛒 Čo treba dokúpiť (cca 3–5 €)</h3>
+  <div class="alert alert-red">
+    <span class="alert-icon">🚨</span>
+    <span class="alert-body"><strong>KRITICKÉ:</strong> MQ senzory pracujú na 5V a ich AO výstup môže dosiahnuť 5V. ESP32 ADC znáša maximálne 3,3V – priame prepojenie by zničilo mikrokontrolér! Preto KAŽDÝ senzor musí mať delič napätia (2 rezistory).</span>
+  </div>
+  <table>
+    <tr><th>Súčiastka</th><th>Ks</th><th>Účel</th></tr>
+    <tr><td><strong>Tranzistor NPN BC547</strong> (alebo 2N2222)</td><td>1×</td><td>Zosilnenie PWM signálu pre reproduktor</td></tr>
+    <tr><td><strong>Dióda 1N4148</strong></td><td>1×</td><td>Ochrana pred spätnými impulzmi z reproduktora</td></tr>
+    <tr><td><strong>Rezistor 1 kΩ</strong> — hnedá–čierna–červená</td><td>1×</td><td>Bázový odpor tranzistora</td></tr>
+    <tr><td><strong>Rezistor 330 Ω</strong> — oranžová–oranžová–hnedá</td><td>1×</td><td>Obmedzovač prúdu pre červenú LED</td></tr>
+    <tr><td><strong>Rezistor 10 kΩ</strong> — hnedá–čierna–oranžová</td><td>3×</td><td>Delič napätia horná časť (jeden na každý MQ)</td></tr>
+    <tr><td><strong>Rezistor 18 kΩ</strong> — hnedá–šedá–oranžová</td><td>3×</td><td>Delič napätia dolná časť (jeden na každý MQ) — dáva bezpečných 3,21V na ADC</td></tr>
+    <tr><td><strong>Červená LED 5mm</strong></td><td>1×</td><td>Vizuálna indikácia aktívneho alarmu</td></tr>
+    <tr><td><strong>Nepájivé pole (breadboard)</strong></td><td>1×</td><td>Prototyp bez spájkovania</td></tr>
+    <tr><td><strong>Jumper wires (prepojovacie káble)</strong></td><td>~25×</td><td>Prepojenie súčiastok</td></tr>
+  </table>
+  <div class="alert alert-blue">
+    <span class="alert-icon">💡</span>
+    <span class="alert-body">Súčiastky nájdete v <strong>GME (gme.cz)</strong>, <strong>TME (tme.eu)</strong> alebo na Aliexpress. V GME stačí zadať do vyhľadávania presný názov súčiastky.</span>
+  </div>
+  <div class="alert alert-yellow">
+    <span class="alert-icon">⚡</span>
+    <span class="alert-body"><strong>Prečo 2A nabíjačka?</strong> Každý MQ senzor odoberá ~160 mA (vyhrievacia cievka). Tri senzory = ~480 mA. ESP32 pri WiFi = ~300 mA. Celkovo ~780 mA. Nabíjačka 1A je na hranici a môže spôsobiť nestabilitu — 2A je bezpečná voľba.</span>
+  </div>
+</div>
+
+<!-- 2. TELEGRAM -->
+<div class="section" id="telegram">
+  <div class="section-header"><div class="section-num">2</div><h2>Nastavenie Telegram Bota</h2></div>
+  <p>Celý postup trvá asi 3 minúty. Robíte to priamo v Telegram aplikácii na telefóne.</p>
+
+  <h3>Krok A — Vytvorenie bota</h3>
+  <div class="step"><span class="step-n">1</span><div class="step-body">Vyhľadajte v Telegrame <strong>@BotFather</strong> (oficialny Telegram bot) a otvorte konverzáciu.</div></div>
+  <div class="step"><span class="step-n">2</span><div class="step-body">Napíšte a odošlite: <kbd>/newbot</kbd></div></div>
+  <div class="step"><span class="step-n">3</span><div class="step-body">BotFather sa opýta na <strong>meno bota</strong> (ľubovolné). Napíšte napr.: <kbd>Detektor plynu kuchyna</kbd></div></div>
+  <div class="step"><span class="step-n">4</span><div class="step-body">Potom sa opýta na <strong>username</strong> — musí končiť slovom <code>bot</code>. Napíšte napr.: <kbd>detektor_kuchyna_bot</kbd></div></div>
+  <div class="step"><span class="step-n">5</span><div class="step-body">BotFather odošle správu s vašim <strong>BOT TOKEN</strong>. Vyzerá takto:<br><kbd>7123456789:AAFabcDEFghiJKLmno_pqrstuvWXYZabcd</kbd><br>⚠️ <strong>Skopírujte a uložte si ho!</strong> Vložíte ho do kódu.</div></div>
+
+  <h3>Krok B — Zistenie Chat ID</h3>
+  <div class="step"><span class="step-n">1</span><div class="step-body">Vyhľadajte v Telegrame <strong>@userinfobot</strong> a otvorte konverzáciu.</div></div>
+  <div class="step"><span class="step-n">2</span><div class="step-body">Napíšte čokoľvek, napr. <kbd>ahoj</kbd></div></div>
+  <div class="step"><span class="step-n">3</span><div class="step-body">Bot zobrazí vaše <strong>Id:</strong> — číslo, napr. <kbd>987654321</kbd><br>⚠️ <strong>Toto číslo uložte</strong> — je to vaše CHAT ID pre kód.</div></div>
+
+  <h3>Krok C — Aktivácia bota</h3>
+  <div class="step"><span class="step-n">1</span><div class="step-body">Vyhľadajte svojho bota podľa jeho username (napr. <kbd>@detektor_kuchyna_bot</kbd>)</div></div>
+  <div class="step"><span class="step-n">2</span><div class="step-body">Kliknite na <strong>START</strong> alebo napíšte <kbd>/start</kbd><br><strong>Toto je povinné!</strong> Bez tohto kroku vám ESP32 nebude môcť posielať správy.</div></div>
+
+  <div class="alert alert-green">
+    <span class="alert-icon">✅</span>
+    <span class="alert-body">Máte <strong>Bot Token</strong> aj <strong>Chat ID</strong>. Obe hodnoty budete zadávať do kódu v sekcii 5.</span>
+  </div>
+</div>
+
+<!-- 3. ARDUINO IDE -->
+<div class="section" id="arduino">
+  <div class="section-header"><div class="section-num">3</div><h2>Arduino IDE – inštalácia a nastavenie</h2></div>
+
+  <h3>Inštalácia Arduino IDE 2</h3>
+  <div class="step"><span class="step-n">1</span><div class="step-body">Stiahnite a nainštalujte <strong>Arduino IDE 2</strong> z: <kbd>arduino.cc/en/software</kbd></div></div>
+  <div class="step"><span class="step-n">2</span><div class="step-body"><strong>Windows:</strong> Ak Arduino IDE nevidí ESP32 (nie je v menu Port), treba nainštalovať USB driver. Vyhľadajte na Google: <kbd>CP2102 driver Windows</kbd> alebo <kbd>CH340 driver Windows</kbd> a nainštalujte.</div></div>
+
+  <h3>Pridanie ESP32 do Arduino IDE</h3>
+  <div class="step"><span class="step-n">1</span><div class="step-body">Otvorte Arduino IDE → menu <strong>File → Preferences</strong></div></div>
+  <div class="step"><span class="step-n">2</span><div class="step-body">Do poľa <strong>"Additional boards manager URLs"</strong> vložte:<br><kbd>https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json</kbd></div></div>
+  <div class="step"><span class="step-n">3</span><div class="step-body">Otvorte <strong>Tools → Board → Boards Manager</strong>, vyhľadajte <kbd>esp32</kbd>, nájdite <strong>Espressif Systems</strong> a nainštalujte verziu <strong>2.x.x</strong> (napr. 2.0.17)</div></div>
+
+  <div class="alert alert-red">
+    <span class="alert-icon">⚠️</span>
+    <span class="alert-body">Inštalujte verziu <strong>2.x.x</strong>, <u>nie 3.x.x</u>! Verzia 3 má zmenené PWM API a kód by nefungoval. V zozname verzií scrollujte nadol na verziu 2.</span>
+  </div>
+
+  <h3>Inštalácia knižníc</h3>
+  <div class="step"><span class="step-n">1</span><div class="step-body">Otvorte <strong>Tools → Manage Libraries</strong></div></div>
+  <div class="step"><span class="step-n">2</span><div class="step-body">Vyhľadajte <kbd>UniversalTelegramBot</kbd>, nájdite autora <strong>Brian Lough</strong> a nainštalujte</div></div>
+  <div class="step"><span class="step-n">3</span><div class="step-body">Vyhľadajte <kbd>ArduinoJson</kbd>, nájdite autora <strong>Benoit Blanchon</strong>, nainštalujte verziu <strong>6.x.x</strong></div></div>
+  <p>Knižnice <code>WiFi.h</code>, <code>WiFiClientSecure.h</code> a <code>esp_task_wdt.h</code> sú súčasťou ESP32 balíka – nie je treba nič iné.</p>
+
+  <h3>Nastavenie dosky (Tools menu)</h3>
+  <table>
+    <tr><th>Nastavenie</th><th>Hodnota</th></tr>
+    <tr><td>Board</td><td><code>ESP32 Dev Module</code></td></tr>
+    <tr><td>Upload Speed</td><td><code>115200</code></td></tr>
+    <tr><td>Flash Size</td><td><code>4MB (32Mb)</code></td></tr>
+    <tr><td>Partition Scheme</td><td><code>Default 4MB with spiffs</code></td></tr>
+    <tr><td>Port</td><td>Váš COM port (napr. COM3 alebo /dev/ttyUSB0)</td></tr>
+  </table>
+</div>
+
+<!-- 4. ZAPOJENIE -->
+<div class="section" id="zapojenie">
+  <div class="section-header"><div class="section-num">4</div><h2>Schéma zapojenia</h2></div>
+
+  <div class="alert alert-red">
+    <span class="alert-icon">🚨</span>
+    <span class="alert-body"><strong>NIKDY nepripájajte AO pin MQ senzora priamo na ESP32 GPIO!</strong> 5V senzorový výstup zničí ESP32 ADC vstup (max 3,3V). Vždy musí byť delič napätia!</span>
+  </div>
+
+  <h3>Prehľad GPIO pinov</h3>
+  <div class="pin-grid">
+    <div class="pin-card"><div class="gpio">GPIO 34</div><div class="comp-name">MQ-2 (AO) — Dym</div><div class="note">Cez delič 10kΩ/18kΩ</div></div>
+    <div class="pin-card"><div class="gpio">GPIO 35</div><div class="comp-name">MQ-4 (AO) — Zemný plyn</div><div class="note">Cez delič 10kΩ/18kΩ</div></div>
+    <div class="pin-card"><div class="gpio">GPIO 32</div><div class="comp-name">MQ-5 (AO) — LPG</div><div class="note">Cez delič 10kΩ/18kΩ</div></div>
+    <div class="pin-card"><div class="gpio">GPIO 26</div><div class="comp-name">Červená LED</div><div class="note">Cez 330Ω rezistor</div></div>
+    <div class="pin-card"><div class="gpio">GPIO 25</div><div class="comp-name">Reproduktor</div><div class="note">Cez BC547 tranzistor</div></div>
+    <div class="pin-card"><div class="gpio">GPIO 14</div><div class="comp-name">Tlačidlo</div><div class="note">Na GND, pull-up v kóde</div></div>
+    <div class="pin-card"><div class="gpio">VIN (5V)</div><div class="comp-name">MQ senzory VCC</div><div class="note">Napájanie heater cievky</div></div>
+    <div class="pin-card"><div class="gpio">GND</div><div class="comp-name">Spoločná zem</div><div class="note">Všetky GND pospájané</div></div>
+  </div>
+
+  <div class="alert alert-blue">
+    <span class="alert-icon">💡</span>
+    <span class="alert-body">GPIO 34 a 35 sú <strong>input-only piny</strong> (len vstup) — to je presne čo potrebujeme pre ADC. Navyše patria do skupiny <strong>ADC1</strong>, ktorá funguje aj keď je zapnutá WiFi. ADC2 piny s WiFi nefungujú!</span>
+  </div>
+
+  <hr class="div">
+  <h3>1. Delič napätia – pre KAŽDÝ MQ senzor (3×)</h3>
+  <div class="wiring-box"><span style="color:#4a5060">┌─────────────────────────────────────────────────────┐
+│  Delič napätia 5V → 3,21V  (opakovať pre MQ-2/4/5) │
+└─────────────────────────────────────────────────────┘</span>
+
+<span style="color:#2dff7a">MQ-x  AO</span> (analogovy vystup senzora, max 5V)
+     <span style="color:#3a3d50">│</span>
+   <span style="color:#4d9eff">[10kΩ]</span>   ← R1 (horny rezistor)
+     <span style="color:#3a3d50">│</span>
+     <span style="color:#3a3d50">├──────────────→</span> <span style="color:#ff6b2b">GPIO 34 / 35 / 32</span> (ESP32 ADC vstup)
+     <span style="color:#3a3d50">│</span>
+   <span style="color:#4d9eff">[18kΩ]</span>   ← R2 (dolny rezistor)
+     <span style="color:#3a3d50">│</span>
+    <span style="color:#2dff7a">GND</span>
+
+<span style="color:#2dff7a">Výpočet: V_gpio = 5V × (18k ÷ (10k+18k)) = 3,21V ✓ (ESP32 max = 3,3V → rezerva 0,09V)</span>
+<span style="color:#4a5060">Pôvodný delič 10k/20k dával 3,33V čo mierne presahovalo max ESP32 ADC!</span></div>
+
+  <hr class="div">
+  <h3>2. Červená LED</h3>
+  <div class="wiring-box"><span style="color:#ff6b2b">GPIO 26</span> <span style="color:#3a3d50">──</span> <span style="color:#4d9eff">[330Ω]</span> <span style="color:#3a3d50">──</span> <span style="color:#2dff7a">LED anóda (+)</span>  <span style="color:#4a5060">← dlhšia nôžka</span>
+                  <span style="color:#2dff7a">LED katóda (−)</span> <span style="color:#3a3d50">──</span> <span style="color:#2dff7a">GND</span>   <span style="color:#4a5060">← kratšia nôžka</span></div>
+
+  <hr class="div">
+  <h3>3. Tlačidlo (4-pin)</h3>
+  <div class="wiring-box"><span style="color:#ff6b2b">GPIO 14</span> <span style="color:#3a3d50">──</span> <span style="color:#2dff7a">Tlačidlo pin 1</span>
+           <span style="color:#2dff7a">Tlačidlo pin 2</span> <span style="color:#3a3d50">──</span> <span style="color:#2dff7a">GND</span>
+
+<span style="color:#4a5060">4-pin tlačidlo: piny 1+2 sú vnútorne spojené, rovnako 3+4.
+Použite ľubovolný pár (napr. 1 a 2, alebo 1 a 4).
+Interný pull-up rezistor v ESP32 je aktivovaný v kóde (INPUT_PULLUP).
+Externý rezistor NIE JE potrebný.</span></div>
+
+  <hr class="div">
+  <h3>4. Reproduktor cez tranzistor BC547</h3>
+  <div class="wiring-box"><span style="color:#4a5060">Identifikácia nôžok BC547 — plochá strana s nápisom smerom k vám:
+  ĽAVÁ nôžka  = C (Kolektor)
+  STREDNÁ     = B (Báza)
+  PRAVÁ nôžka = E (Emitor)</span>
+
+<span style="color:#2dff7a">VIN (5V)</span>
+   <span style="color:#3a3d50">│</span>
+<span style="color:#2dff7a">Reproduktor (+)</span>
+<span style="color:#2dff7a">Reproduktor (−)</span>
+   <span style="color:#3a3d50">│</span>
+   <span style="color:#3a3d50">├──</span> <span style="color:#ffd166">1N4148</span> <span style="color:#3a3d50">──→</span> <span style="color:#2dff7a">VIN (5V)</span>   <span style="color:#4a5060">← katóda (+prúžok) na 5V, anóda na kolektor</span>
+   <span style="color:#3a3d50">│</span>
+<span style="color:#4d9eff">C</span> (Kolektor)  BC547
+<span style="color:#4d9eff">E</span> (Emitor)   <span style="color:#3a3d50">──</span> <span style="color:#2dff7a">GND</span>
+<span style="color:#4d9eff">B</span> (Báza)     <span style="color:#3a3d50">──</span> <span style="color:#4d9eff">[1kΩ]</span> <span style="color:#3a3d50">──</span> <span style="color:#ff6b2b">GPIO 25</span>
+
+<span style="color:#4a5060">GPIO 25 generuje PWM → tranzistor zosilní signál → reproduktor vydáva tón.</span></div>
+
+  <div class="alert alert-yellow">
+    <span class="alert-icon">💡</span>
+    <span class="alert-body">Dióda 1N4148 je dôležitá — reproduktor má malú cievku, ktorá pri vypínaní generuje napäťový impulz. Dióda ho zachytí a ochráni tranzistor. Čierny prúžok na dióde = katóda = strana smerujúca k 5V.</span>
+  </div>
+
+  <hr class="div">
+  <h3>5. Napájanie MQ senzorov</h3>
+  <table>
+    <tr><th>Pin na MQ module</th><th>Pripojiť na</th><th>Poznámka</th></tr>
+    <tr><td><code>VCC</code></td><td><strong>VIN (5V)</strong> na NodeMCU</td><td>Napájanie heater cievky aj obvodu</td></tr>
+    <tr><td><code>GND</code></td><td><strong>GND</strong> na NodeMCU</td><td>Spoločná zem</td></tr>
+    <tr><td><code>AO</code></td><td>Cez delič 10kΩ/18kΩ → GPIO</td><td>⚠️ Vždy cez delič!</td></tr>
+    <tr><td><code>DO</code></td><td><strong>Nepripájajte</strong></td><td>Digitálny výstup – nepoužívame</td></tr>
+  </table>
+</div>
+
+<!-- 5. KÓD -->
+<div class="section" id="kod">
+  <div class="section-header"><div class="section-num">5</div><h2>Programový kód</h2></div>
+
+  <div class="alert alert-red">
+    <span class="alert-icon">🔴</span>
+    <span class="alert-body"><strong>PRED NAHRATÍM vyplňte tieto 4 hodnoty na začiatku kódu:</strong><br>
+    <kbd>WIFI_SSID</kbd> — názov vašej WiFi &nbsp;|&nbsp;
+    <kbd>WIFI_PASSWORD</kbd> — heslo WiFi &nbsp;|&nbsp;
+    <kbd>BOT_TOKEN</kbd> — token z BotFather &nbsp;|&nbsp;
+    <kbd>CHAT_ID_STR</kbd> — vaše Chat ID</span>
+  </div>
+
+  <div class="code-wrapper">
+    <button class="copy-btn" id="copyBtn" onclick="copyCode()">📋 Kopírovať kód</button>
+    <pre><code id="codeBlock"></code></pre>
+  </div>
+</div>
+
+<!-- 6. KALIBRÁCIA -->
+<div class="section" id="kalibracia">
+  <div class="section-header"><div class="section-num">6</div><h2>Kalibrácia senzorov</h2></div>
+
+  <div class="alert alert-yellow">
+    <span class="alert-icon">⏳</span>
+    <span class="alert-body"><strong>Prvé použitie — burn-in (vyhorenie):</strong> Nové MQ senzory musia "dohorieť" — nechajte systém bežať <strong>24–48 hodín</strong> predtým než ho ostrô nasadíte. Počas tejto doby môžu hodnoty kolísať alebo falošne alarmiť — je to normálne.</span>
+  </div>
+
+  <h3>Postup kalibrácie</h3>
+  <div class="step"><span class="step-n">1</span><div class="step-body">Zapojte ESP32 k počítaču USB. Otvorte <strong>Tools → Serial Monitor</strong>, baudrate: <kbd>115200</kbd></div></div>
+  <div class="step"><span class="step-n">2</span><div class="step-body">Po 60s zahrievaní uvidíte výpisy každých ~50ms:<br><kbd>[16.04.2026 14:23:01]  MQ2(dym)= 310  |  MQ4(gas)= 275  |  MQ5(LPG)= 290</kbd><br>Toto sú <strong>kľudové hodnoty</strong> v čistom vzduchu. Zapíšte si ich.</div></div>
+  <div class="step"><span class="step-n">3</span><div class="step-body"><strong>Test dymu (MQ-2):</strong> Zapáľte zápalku, sfúknite a dym privedite k senzoru. Sledujte ako MQ2(dym) stúpa. Prah <kbd>THRESHOLD_SMOKE</kbd> nastavte na hodnotu zhruba <strong>3× vyššiu</strong> ako kľudová, ale nižšiu ako hodnota pri dymu.</div></div>
+  <div class="step"><span class="step-n">4</span><div class="step-body"><strong>Test plynu (MQ-4, MQ-5):</strong> Krátko stlačte zapaľovač <em>bez iskry</em> (len uvoľnite plyn) blízko senzorov. Sledujte nárast hodnôt a podľa toho nastavte prahy.</div></div>
+  <div class="step"><span class="step-n">5</span><div class="step-body">Upravte <kbd>THRESHOLD_SMOKE</kbd>, <kbd>THRESHOLD_GAS4</kbd>, <kbd>THRESHOLD_GAS5</kbd> v kóde a znova nahrajte do ESP32.</div></div>
+
+  <h3>Orientačné hodnoty</h3>
+  <table>
+    <tr><th>Senzor</th><th>Kľudová hodnota (čistý vzduch)</th><th>Odporúčaný začiatočný prah</th></tr>
+    <tr><td>MQ-2 (dym)</td><td>200 – 500</td><td><strong>1 500 – 2 000</strong></td></tr>
+    <tr><td>MQ-4 (zemný plyn)</td><td>200 – 450</td><td><strong>1 200 – 1 800</strong></td></tr>
+    <tr><td>MQ-5 (LPG)</td><td>200 – 450</td><td><strong>1 200 – 1 800</strong></td></tr>
+  </table>
+
+  <h3>Dostupné Telegram príkazy</h3>
+  <table>
+    <tr><th>Príkaz</th><th>Funkcia</th></tr>
+    <tr><td><kbd>/mute</kbd></td><td>Vypne zvukový alarm (LED zostáva zapnutá počas nebezpečenstva)</td></tr>
+    <tr><td><kbd>/status</kbd></td><td>Zobrazí aktuálne hodnoty všetkých 3 senzorov + stav alarmu</td></tr>
+    <tr><td><kbd>/help</kbd></td><td>Zoznam príkazov</td></tr>
+  </table>
+</div>
+
+<!-- 7. PRVÝ ŠTART -->
+<div class="section" id="start">
+  <div class="section-header"><div class="section-num">7</div><h2>Prvý štart – overenie funkčnosti</h2></div>
+
+  <div class="step"><span class="step-n">1</span><div class="step-body">Vyplňte WiFi + Telegram údaje v kóde (sekcia 5). Nahrajte kód do ESP32 cez USB.</div></div>
+  <div class="step"><span class="step-n">2</span><div class="step-body">Otvorte <strong>Serial Monitor</strong> (115200 baud). Mali by ste vidieť: aktiváciu watchdoga, nastavenie ADC, pripojenie na WiFi a sync NTP času.</div></div>
+  <div class="step"><span class="step-n">3</span><div class="step-body">Na Telegram príde správa: <kbd>Zahrievam senzory 60 sekund...</kbd><br>Ak prišla — WiFi aj Telegram fungujú! ✅</div></div>
+  <div class="step"><span class="step-n">4</span><div class="step-body">Po 60s príde správa <kbd>MONITORING AKTIVNY</kbd> s príkazmi. Systém monitoruje.</div></div>
+  <div class="step"><span class="step-n">5</span><div class="step-body"><strong>Test tlačidla:</strong> Stlačte tlačidlo — v Serial Monitore: "Zvuk vypnuty tlacidlom".</div></div>
+  <div class="step"><span class="step-n">6</span><div class="step-body"><strong>Test Telegram príkazu:</strong> Pošlite <kbd>/status</kbd> — mal by prísť reply s hodnotami senzorov.</div></div>
+  <div class="step"><span class="step-n">7</span><div class="step-body"><strong>Test alarmu:</strong> Zápalkou + dym privedený k MQ-2. Mal by sa spustiť zvuk, blikať LED a prísť Telegram správa s typom alarmu, časom a hodnotami.</div></div>
+
+  <div class="alert alert-green">
+    <span class="alert-icon">✅</span>
+    <span class="alert-body">Všetko funguje? Gratulujeme! Odpojte USB, napájajte cez telefónnu nabíjačku 5V/2A zo zásuvky. Systém je pripravený.</span>
+  </div>
+
+  <h3>Časté problémy a riešenia</h3>
+  <table>
+    <tr><th>Problém</th><th>Riešenie</th></tr>
+    <tr><td>Arduino IDE nevidí ESP32 (nič v menu Port)</td><td>Nainštalujte CP2102 alebo CH340 USB driver</td></tr>
+    <tr><td>Upload zlyháva / chyba</td><td>Počas uploadu podržte tlačidlo <strong>BOOT</strong> na ESP32</td></tr>
+    <tr><td>Nepríde Telegram správa</td><td>Skontrolujte BOT_TOKEN a CHAT_ID_STR; klikli ste na /start v bote?</td></tr>
+    <tr><td>Senzory stále ukazujú 0</td><td>Skontrolujte delič napätia — možno chybné rezistory alebo zapojenie</td></tr>
+    <tr><td>Reproduktor nehrá</td><td>Skontrolujte polaritu diódy 1N4148 a nôžky BC547 (C–B–E)</td></tr>
+    <tr><td>Falošné alarmy stále po burn-in</td><td>Zvýšte prahové hodnoty (THRESHOLD_SMOKE/GAS4/GAS5) v kóde a znova nahrajte</td></tr>
+    <tr><td>ESP32 sa opakuje reštartuje</td><td>Watchdog timer reštartuje ESP32 ak kód zamrzne — skontrolujte WiFi a Telegram pripojenie, je to ochranná funkcia</td></tr>
+  </table>
+</div>
+
+</div><!-- /container -->
+<footer>ESP32 Detektor plynu a dymu v2.0 · NodeMCU ESP32 + MQ-2 + MQ-4 + MQ-5 · Arduino IDE 2.x · ESP32 core 2.x · UniversalTelegramBot · ArduinoJson 6.x</footer>
+
+<script>
+// Kód je ulozeny ako raw string - \n v C++ stringoch sa tu zachovava ako text
+const cppCode = String.raw`/*
+ * ================================================================
+ *   DETEKTOR PLYNU A DYMU – ESP32  v2.0
+ * ================================================================
+ *
+ *  ZAPOJENIE PINOV:
+ *    GPIO 34  <-- MQ-2 AO  (cez delic 10kOhm / 18kOhm na GND)
+ *    GPIO 35  <-- MQ-4 AO  (cez delic 10kOhm / 18kOhm na GND)
+ *    GPIO 32  <-- MQ-5 AO  (cez delic 10kOhm / 18kOhm na GND)
+ *    GPIO 26  --> Cervena LED  (cez 330 Ohm na GND)
+ *    GPIO 25  --> BC547 Baza  (cez 1kOhm), Kolektor -> Repr(-) -> Repr(+) -> 5V
+ *    GPIO 14  <-- Tlacidlo  (druhy pin na GND, INPUT_PULLUP v kode)
+ *
+ *  POTREBNE KNIZNICY (nainštaluj cez Arduino -> Manage Libraries):
+ *    - UniversalTelegramBot  (autor: Brian Lough)
+ *    - ArduinoJson 6.x       (autor: Benoit Blanchon)
+ *    WiFi.h, WiFiClientSecure.h, esp_task_wdt.h su sucástou ESP32 balíka
+ *
+ *  NAPAJANIE: USB nabíjačka min. 5V/2A !
+ *  ESP32 CORE: pouzivajte verziu 2.x.x (nie 3.x!)
+ * ================================================================
+ */
+
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <UniversalTelegramBot.h>
+#include <ArduinoJson.h>
+#include <time.h>
+#include <esp_task_wdt.h>
+
+// ----------------------------------------------------------------
+//  POVINNE VYPLNTE TIETO 4 HODNOTY PRED NAHRATIM DO ESP32!
+// ----------------------------------------------------------------
+const char* WIFI_SSID     = "TVOJE_WIFI_MENO";
+const char* WIFI_PASSWORD = "TVOJE_WIFI_HESLO";
+const char* BOT_TOKEN     = "123456789:XXXXXXXXXXXXXXXXXXXXXXXXXXX";
+const char* CHAT_ID_STR   = "123456789";
+
+// ----------------------------------------------------------------
+//  PINY - nemeňte pokial nezmenite aj fyzicke zapojenie
+//  GPIO 34, 35, 32 su ADC1 kanaly - funguju spravne aj pri WiFi!
+//  ADC2 kanaly s WiFi nefunguju - nepoužívame ich.
+// ----------------------------------------------------------------
+#define PIN_MQ2      34     // ADC1 vstup - senzor dymu
+#define PIN_MQ4      35     // ADC1 vstup - senzor zemneho plynu
+#define PIN_MQ5      32     // ADC1 vstup - senzor LPG
+#define PIN_LED      26     // Vystup - cervena LED
+#define PIN_SPEAKER  25     // Vystup - PWM pre reproduktor
+#define PIN_BUTTON   14     // Vstup  - tlacidlo (GND strana)
+
+// ----------------------------------------------------------------
+//  PRAHY DETEKCIE  (rozsah ADC: 0 az 4095)
+//  Po kalibraci upravte! Postup v sekcii 6 navodu.
+//
+//  Ak su FALSE ALARMY  -> prahy ZVYS
+//  Ak NEDETEKUJE       -> prahy ZNIZ
+// ----------------------------------------------------------------
+#define THRESHOLD_SMOKE  1500     // Prah pre dym / spalene jedlo  (MQ-2)
+#define THRESHOLD_GAS4   1500     // Prah pre zemny plyn (metan)   (MQ-4)
+#define THRESHOLD_GAS5   1500     // Prah pre LPG (propan-butan)   (MQ-5)
+
+// ----------------------------------------------------------------
+//  TONY REPRODUKTORA (Hz)
+//  Rozne tony pre rozne typy alarmu - okamzite spoznas typ!
+//  Nizky ton = plyn  |  Vysoky ton = dym
+// ----------------------------------------------------------------
+#define TONE_GAS    1000    // Hz - unik plynu
+#define TONE_SMOKE  2500    // Hz - dym / spalene jedlo
+
+// ----------------------------------------------------------------
+//  CASOVANIE
+// ----------------------------------------------------------------
+#define BLINK_INTERVAL    500    // ms - rychlost blikania LED
+#define TELEGRAM_INTERVAL 1500   // ms - interval kontroly sprav z Telegramu
+#define DEBOUNCE_MS       200    // ms - ochrana tlacidla pred zakmitmi
+#define ADC_SAMPLES       10     // pocet merani pre priemer (redukcia sumu)
+#define WARMUP_SECONDS    60     // s  - zahrievanie MQ senzorov po zapnuti
+
+// [v2.0] Watchdog - ak kod nedobehne loop() do 10s, ESP32 sa restartuje
+#define WATCHDOG_TIMEOUT_S  10
+
+// NTP - Slovensky cas (automaticky prepina leto/zima)
+#define NTP_SERVER  "pool.ntp.org"
+#define TZ_STRING   "CET-1CEST,M3.5.0,M10.5.0/3"
+
+// ----------------------------------------------------------------
+//  GLOBALNE PREMENNE  (nemen)
+// ----------------------------------------------------------------
+WiFiClientSecure     secureClient;
+UniversalTelegramBot bot(BOT_TOKEN, secureClient);
+
+bool   alarmActive    = false;
+bool   buzzerMuted    = false;
+bool   gasDetected    = false;
+bool   smokeDetected  = false;
+bool   prevGas        = false;
+bool   prevSmoke      = false;
+String alarmStartTime = "";
+
+unsigned long tLastTelegram = 0;
+unsigned long tLastBlink    = 0;
+unsigned long tLastDebounce = 0;
+bool   ledState     = false;
+bool   lastBtnState = HIGH;
+
+// ================================================================
+//   POMOCNE FUNKCIE
+// ================================================================
+
+// Priemer z ADC_SAMPLES merani - znizuje sum senzora
+int readSmooth(int pin) {
+  long sum = 0;
+  for (int i = 0; i < ADC_SAMPLES; i++) {
+    sum += analogRead(pin);
+    delay(2);
+  }
+  return (int)(sum / ADC_SAMPLES);
+}
+
+// Vrati aktualny cas ako text "DD.MM.RRRR HH:MM:SS"
+String timeNow() {
+  struct tm ti;
+  if (!getLocalTime(&ti)) return "--.--.---- --:--:--";
+  char buf[22];
+  strftime(buf, sizeof(buf), "%d.%m.%Y %H:%M:%S", &ti);
+  return String(buf);
+}
+
+// Odosle spravu na Telegram
+void tgSend(const String& msg) {
+  if (WiFi.status() == WL_CONNECTED) {
+    bot.sendMessage(CHAT_ID_STR, msg, "");
+    Serial.println("[TG odoslana] " + msg.substring(0, 80));
+  } else {
+    Serial.println("[TG] WiFi nedostupne – sprava neodoslana.");
+  }
+}
+
+// Spusti ton na reproduktore (ignoruje sa ak je alarm umlcany)
+void buzzerPlay(int freq) {
+  if (!buzzerMuted) ledcWriteTone(0, freq);
+}
+
+// Zastavi reproduktor
+void buzzerStop() {
+  ledcWriteTone(0, 0);
+}
+
+// Pripoji ESP32 k WiFi, pri zlyhani restartuje
+void wifiConnect() {
+  Serial.printf("\nWiFi: pripajam k '%s'", WIFI_SSID);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  for (int i = 0; i < 40 && WiFi.status() != WL_CONNECTED; i++) {
+    delay(500);
+    Serial.print(".");
+    esp_task_wdt_reset();    // krmit watchdog pocas cakania na WiFi
+  }
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println(" OK!  IP: " + WiFi.localIP().toString());
+  } else {
+    Serial.println("\nCHYBA WiFi! Restartujem za 3 sekundy...");
+    delay(3000);
+    ESP.restart();
+  }
+}
+
+// ================================================================
+//   SPRACOVANIE TELEGRAM SPRAV (prikazy)
+// ================================================================
+void handleTelegram() {
+  int n = bot.getUpdates(bot.last_message_received + 1);
+  while (n) {
+    for (int i = 0; i < n; i++) {
+      String cid  = bot.messages[i].chat_id;
+      String text = bot.messages[i].text;
+      String from = bot.messages[i].from_name;
+
+      // Bezpecnost: ignoruj spravy od inych pouzivatelov
+      if (cid != String(CHAT_ID_STR)) {
+        bot.sendMessage(cid, "Pristup zamietnuty.", "");
+        continue;
+      }
+      Serial.println("[TG prijata] " + from + ": " + text);
+
+      if (text == "/mute") {
+        if (alarmActive) {
+          buzzerMuted = true;
+          buzzerStop();
+          tgSend("Zvukovy alarm VYPNUTY.\nLED zostava zapnuta kym problem neustane.");
+        } else {
+          tgSend("Momentalne nie je ziadny aktivny alarm.");
+        }
+      }
+      else if (text == "/status") {
+        int v2 = readSmooth(PIN_MQ2);
+        int v4 = readSmooth(PIN_MQ4);
+        int v5 = readSmooth(PIN_MQ5);
+        String s = "=== STAV SENZOROV ===\n";
+        s += "Cas: " + timeNow() + "\n---------------------\n";
+        s += "MQ-2  (dym):        " + String(v2) + (v2 > THRESHOLD_SMOKE ? "  <!> ALARM" : "  [OK]") + "\n";
+        s += "MQ-4  (zemny plyn): " + String(v4) + (v4 > THRESHOLD_GAS4  ? "  <!> ALARM" : "  [OK]") + "\n";
+        s += "MQ-5  (LPG):        " + String(v5) + (v5 > THRESHOLD_GAS5  ? "  <!> ALARM" : "  [OK]") + "\n";
+        s += "---------------------\n";
+        s += "Alarm: " + String(alarmActive ? "AKTIVNY" : "NEAKTIVNY") + "\n";
+        s += "Zvuk:  " + String(buzzerMuted  ? "uticany" : "aktivny");
+        if (alarmActive) s += "\nZaciatok: " + alarmStartTime;
+        tgSend(s);
+      }
+      else if (text == "/help" || text == "/start") {
+        tgSend("=== DETEKTOR PLYNU A DYMU ===\n\n"
+               "Dostupne prikazy:\n"
+               "/mute   - vypnut zvukovy alarm\n"
+               "/status - aktualny stav senzorov\n"
+               "/help   - tento zoznam\n\n"
+               "Zariadenie automaticky posle spravu\n"
+               "ked detekuje unik plynu alebo dym.");
+      }
+      else {
+        tgSend("Neznam prikaz. Napis /help");
+      }
+    }
+    n = bot.getUpdates(bot.last_message_received + 1);
+  }
+}
+
+// ================================================================
+//   S E T U P   -   vykona sa raz pri zapnuti
+// ================================================================
+void setup() {
+  Serial.begin(115200);
+  delay(500);
+  Serial.println("\n\n=== DETEKTOR PLYNU A DYMU  v2.0 ===");
+
+  // [v2.0] Watchdog timer - restartuje ESP32 ak zamrzne (timeout 10s)
+  esp_task_wdt_init(WATCHDOG_TIMEOUT_S, true);
+  esp_task_wdt_add(NULL);
+  Serial.println("Watchdog timer aktivovany (10s timeout).");
+
+  // Nastavenie pinov
+  pinMode(PIN_LED,    OUTPUT);
+  pinMode(PIN_BUTTON, INPUT_PULLUP);   // interny pull-up, tlacidlo -> GND
+  digitalWrite(PIN_LED, LOW);
+
+  // LEDC - PWM kanal 0 pre reproduktor
+  ledcSetup(0, 2000, 8);               // kanal 0, 2 kHz, 8-bit rozlisenie
+  ledcAttachPin(PIN_SPEAKER, 0);
+  buzzerStop();
+
+  // [v2.0] ADC: 12-bit, 11dB attenuation = meraci rozsah 0–3.3V
+  // DOLEZITE: bez tohto nastavenia ADC meria len do ~1V!
+  analogReadResolution(12);
+  analogSetAttenuation(ADC_11db);
+  Serial.println("ADC nastaveny: 12-bit, 11dB (0–3.3V rozsah).");
+
+  // Self-test: 2x bliknutie LED + 2 pipnutia
+  for (int i = 0; i < 2; i++) {
+    digitalWrite(PIN_LED, HIGH); buzzerPlay(1500); delay(200);
+    digitalWrite(PIN_LED, LOW);  buzzerStop();     delay(200);
+  }
+  Serial.println("Self-test OK.");
+
+  // WiFi pripojenie
+  wifiConnect();
+
+  // SSL certifikat pre Telegram
+  secureClient.setCACert(TELEGRAM_CERTIFICATE_ROOT);
+
+  // Synchronizacia casu cez NTP
+  Serial.print("NTP synchronizacia");
+  configTzTime(TZ_STRING, NTP_SERVER);
+  for (int i = 0; i < 20; i++) {
+    struct tm t;
+    if (getLocalTime(&t)) break;
+    delay(500); Serial.print(".");
+    esp_task_wdt_reset();
+  }
+  Serial.println("  " + timeNow());
+
+  // Telegram: sprava o starte
+  tgSend("=== DETEKTOR SPUSTENY ===\nCas: " + timeNow() +
+         "\n\nZahrievam senzory " + String(WARMUP_SECONDS) + " sekund...\nProsim cakajte.");
+
+  // Zahriatie MQ senzorov (60 sekund)
+  // DOLEZITE: MQ senzory potrebuju ~60s na stabilizaciu po zapnuti.
+  // Pri UPLNE PRVOM zapnuti (nove senzory) nechaj bezat 24–48h (burn-in).
+  Serial.printf("Zahriatie senzorov: %d sekund\n", WARMUP_SECONDS);
+  for (int i = WARMUP_SECONDS; i > 0; i--) {
+    Serial.printf("  Zostava: %3ds  |  MQ2=%4d  MQ4=%4d  MQ5=%4d\r",
+                  i, analogRead(PIN_MQ2), analogRead(PIN_MQ4), analogRead(PIN_MQ5));
+    delay(1000);
+    esp_task_wdt_reset();   // krmit watchdog kazdu sekundu
+  }
+  Serial.println("\n\nSenzory pripravene! Zacinam monitoring...");
+
+  tgSend("Senzory su zahriate.\nMONITORING AKTIVNY.\n\nNapiste /status alebo /help");
+}
+
+// ================================================================
+//   L O O P   -   opakuje sa dookola
+// ================================================================
+void loop() {
+  unsigned long now = millis();
+
+  // [v2.0] Watchdog reset - zavolá sa každý cyklus (~50ms)
+  esp_task_wdt_reset();
+
+  // 1. Čítanie senzorov (priemery z 10 meraní)
+  int v2 = readSmooth(PIN_MQ2);
+  int v4 = readSmooth(PIN_MQ4);
+  int v5 = readSmooth(PIN_MQ5);
+
+  Serial.printf("[%s]  MQ2(dym)=%4d  |  MQ4(gas)=%4d  |  MQ5(LPG)=%4d",
+                timeNow().c_str(), v2, v4, v5);
+  if (alarmActive) Serial.print("  <<< ALARM >>>");
+  Serial.println();
+
+  // 2. Vyhodnotenie stavu
+  smokeDetected = (v2 > THRESHOLD_SMOKE);
+  gasDetected   = (v4 > THRESHOLD_GAS4) || (v5 > THRESHOLD_GAS5);
+  bool currAlarm = smokeDetected || gasDetected;
+
+  // 3. ZACIATOK ALARMU
+  if (currAlarm && !alarmActive) {
+    alarmActive    = true;
+    buzzerMuted    = false;
+    alarmStartTime = timeNow();
+    prevGas        = gasDetected;
+    prevSmoke      = smokeDetected;
+
+    String msg = "!!! ALARM SPUSTENY !!!\nZaciatok: " + alarmStartTime + "\n\n";
+    if (gasDetected) {
+      msg += ">>> UNIK PLYNU <<<\n";
+      if (v4 > THRESHOLD_GAS4) msg += "  Zemny plyn MQ-4: " + String(v4) + "\n";
+      if (v5 > THRESHOLD_GAS5) msg += "  LPG / Propan MQ-5: " + String(v5) + "\n";
+      msg += "IHNED VETRAJTE A UZAVRITE PLYN!\n\n";
+    }
+    if (smokeDetected) {
+      msg += ">>> DYM ZO SPALENEHO JEDLA <<<\n";
+      msg += "  MQ-2 hodnota: " + String(v2) + "\n\n";
+    }
+    msg += "Pre vypnutie zvuku napisite: /mute";
+    tgSend(msg);
+    Serial.println(">>> ALARM SPUSTENY: " + alarmStartTime);
+  }
+
+  // 4. KONIEC ALARMU
+  if (!currAlarm && alarmActive) {
+    alarmActive = false;
+    String endTime = timeNow();
+    String msg = "=== ALARM UKONCENY ===\n\n";
+    if (prevGas)   msg += "Typ: Unik plynu\n";
+    if (prevSmoke) msg += "Typ: Dym\n";
+    msg += "Zaciatok: " + alarmStartTime + "\n";
+    msg += "Koniec:   " + endTime + "\n\nProstredie je bezpecne.";
+    tgSend(msg);
+    Serial.println(">>> ALARM UKONCENY: " + endTime);
+    buzzerStop();
+    digitalWrite(PIN_LED, LOW);
+    ledState    = false;
+    buzzerMuted = false;
+  }
+
+  if (alarmActive) {
+    prevGas   = prevGas   || gasDetected;
+    prevSmoke = prevSmoke || smokeDetected;
+  }
+
+  // 5. LED + ZVUK (blikanie pocas alarmu)
+  if (alarmActive) {
+    if (now - tLastBlink >= BLINK_INTERVAL) {
+      tLastBlink = now;
+      ledState = !ledState;
+      digitalWrite(PIN_LED, ledState);
+      if (!buzzerMuted) {
+        if (ledState) {
+          if (gasDetected && smokeDetected) {
+            static bool toneToggle = false;
+            toneToggle = !toneToggle;
+            buzzerPlay(toneToggle ? TONE_GAS : TONE_SMOKE);
+          } else if (gasDetected) {
+            buzzerPlay(TONE_GAS);
+          } else {
+            buzzerPlay(TONE_SMOKE);
+          }
+        } else {
+          buzzerStop();
+        }
+      }
+    }
+  }
+
+  // 6. TLACIDLO - vypnutie zvuku
+  bool btnNow = digitalRead(PIN_BUTTON);
+  if (btnNow == LOW && lastBtnState == HIGH) {
+    if (now - tLastDebounce > DEBOUNCE_MS) {
+      tLastDebounce = now;
+      if (alarmActive && !buzzerMuted) {
+        buzzerMuted = true;
+        buzzerStop();
+        Serial.println("Zvuk vypnuty tlacidlom.");
+        tgSend("Zvukovy alarm VYPNUTY tlacidlom.\nLED zostava zapnuta kym problem neustane.");
+      }
+    }
+  }
+  lastBtnState = btnNow;
+
+  // 7. TELEGRAM - kontrola prichadzajucich sprav
+  if (now - tLastTelegram >= TELEGRAM_INTERVAL) {
+    tLastTelegram = now;
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("WiFi stratene! Obnovujem...");
+      wifiConnect();
+      secureClient.setCACert(TELEGRAM_CERTIFICATE_ROOT);
+    }
+    handleTelegram();
+  }
+
+  delay(50);
+}`;
+
+// Vloz kod do <pre><code> elementu pomocou textContent
+// textContent automaticky escapuje HTML znaky (< > &) spravne
+document.getElementById('codeBlock').textContent = cppCode.trim();
+
+// Funkcia pre kopirovanie kodu do schranky
+async function copyCode() {
+  const btn = document.getElementById('copyBtn');
+  try {
+    await navigator.clipboard.writeText(document.getElementById('codeBlock').textContent);
+    btn.textContent = '✓ Skopírované!';
+    btn.style.background = 'rgba(45,255,122,0.2)';
+    btn.style.borderColor = 'rgba(45,255,122,0.5)';
+    btn.style.color = '#2dff7a';
+    setTimeout(() => {
+      btn.textContent = '📋 Kopírovať kód';
+      btn.style.background = '';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    }, 2500);
+  } catch(e) {
+    btn.textContent = '⚠ Označ manuálne (Ctrl+A)';
+    setTimeout(() => { btn.textContent = '📋 Kopírovať kód'; }, 2500);
+  }
+}
+</script>
+</body>
+</html>
