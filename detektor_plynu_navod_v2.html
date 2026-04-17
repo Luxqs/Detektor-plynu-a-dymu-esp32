@@ -110,8 +110,8 @@ footer{text-align:center;color:var(--muted);font-size:.73rem;padding:2rem 1rem 1
     <tr><td><strong>Dióda 1N4148</strong></td><td>1×</td><td>Ochrana pred spätnými impulzmi z reproduktora</td></tr>
     <tr><td><strong>Rezistor 1 kΩ</strong> — hnedá–čierna–červená</td><td>1×</td><td>Bázový odpor tranzistora</td></tr>
     <tr><td><strong>Rezistor 330 Ω</strong> — oranžová–oranžová–hnedá</td><td>1×</td><td>Obmedzovač prúdu pre červenú LED</td></tr>
-    <tr><td><strong>Rezistor 10 kΩ</strong> — hnedá–čierna–oranžová</td><td>3×</td><td>Delič napätia horná časť (jeden na každý MQ)</td></tr>
-    <tr><td><strong>Rezistor 18 kΩ</strong> — hnedá–šedá–oranžová</td><td>3×</td><td>Delič napätia dolná časť (jeden na každý MQ) — dáva bezpečných 3,21V na ADC</td></tr>
+    <tr><td><strong>Rezistor 10 kΩ</strong> — hnedá–čierna–oranžová</td><td>3×</td><td>Delič napätia dolná časť R2 (jeden na každý MQ)</td></tr>
+    <tr><td><strong>Rezistor 6,8 kΩ</strong> — modrá–šedá–červená</td><td>3×</td><td>Delič napätia horná časť R1 (jeden na každý MQ) — v kombinácii s 10kΩ dáva bezpečných 2,97V na ADC (rezerva 324mV)</td></tr>
     <tr><td><strong>Červená LED 5mm</strong></td><td>1×</td><td>Vizuálna indikácia aktívneho alarmu</td></tr>
     <tr><td><strong>Nepájivé pole (breadboard)</strong></td><td>1×</td><td>Prototyp bez spájkovania</td></tr>
     <tr><td><strong>Jumper wires (prepojovacie káble)</strong></td><td>~25×</td><td>Prepojenie súčiastok</td></tr>
@@ -199,9 +199,9 @@ footer{text-align:center;color:var(--muted);font-size:.73rem;padding:2rem 1rem 1
 
   <h3>Prehľad GPIO pinov</h3>
   <div class="pin-grid">
-    <div class="pin-card"><div class="gpio">GPIO 34</div><div class="comp-name">MQ-2 (AO) — Dym</div><div class="note">Cez delič 10kΩ/18kΩ</div></div>
-    <div class="pin-card"><div class="gpio">GPIO 35</div><div class="comp-name">MQ-4 (AO) — Zemný plyn</div><div class="note">Cez delič 10kΩ/18kΩ</div></div>
-    <div class="pin-card"><div class="gpio">GPIO 32</div><div class="comp-name">MQ-5 (AO) — LPG</div><div class="note">Cez delič 10kΩ/18kΩ</div></div>
+    <div class="pin-card"><div class="gpio">GPIO 34</div><div class="comp-name">MQ-2 (AO) — Dym</div><div class="note">Cez delič 6,8kΩ/10kΩ</div></div>
+    <div class="pin-card"><div class="gpio">GPIO 35</div><div class="comp-name">MQ-4 (AO) — Zemný plyn</div><div class="note">Cez delič 6,8kΩ/10kΩ</div></div>
+    <div class="pin-card"><div class="gpio">GPIO 32</div><div class="comp-name">MQ-5 (AO) — LPG</div><div class="note">Cez delič 6,8kΩ/10kΩ</div></div>
     <div class="pin-card"><div class="gpio">GPIO 26</div><div class="comp-name">Červená LED</div><div class="note">Cez 330Ω rezistor</div></div>
     <div class="pin-card"><div class="gpio">GPIO 25</div><div class="comp-name">Reproduktor</div><div class="note">Cez BC547 tranzistor</div></div>
     <div class="pin-card"><div class="gpio">GPIO 14</div><div class="comp-name">Tlačidlo</div><div class="note">Na GND, pull-up v kóde</div></div>
@@ -217,21 +217,21 @@ footer{text-align:center;color:var(--muted);font-size:.73rem;padding:2rem 1rem 1
   <hr class="div">
   <h3>1. Delič napätia – pre KAŽDÝ MQ senzor (3×)</h3>
   <div class="wiring-box"><span style="color:#4a5060">┌─────────────────────────────────────────────────────┐
-│  Delič napätia 5V → 3,21V  (opakovať pre MQ-2/4/5) │
+│  Delič napätia 5V → 2,97V  (opakovať pre MQ-2/4/5) │
 └─────────────────────────────────────────────────────┘</span>
 
 <span style="color:#2dff7a">MQ-x  AO</span> (analogovy vystup senzora, max 5V)
      <span style="color:#3a3d50">│</span>
-   <span style="color:#4d9eff">[10kΩ]</span>   ← R1 (horny rezistor)
+   <span style="color:#4d9eff">[6,8kΩ]</span> ← R1 (horny rezistor)
      <span style="color:#3a3d50">│</span>
      <span style="color:#3a3d50">├──────────────→</span> <span style="color:#ff6b2b">GPIO 34 / 35 / 32</span> (ESP32 ADC vstup)
      <span style="color:#3a3d50">│</span>
-   <span style="color:#4d9eff">[18kΩ]</span>   ← R2 (dolny rezistor)
+   <span style="color:#4d9eff">[10kΩ]</span>  ← R2 (dolny rezistor)
      <span style="color:#3a3d50">│</span>
     <span style="color:#2dff7a">GND</span>
 
-<span style="color:#2dff7a">Výpočet: V_gpio = 5V × (18k ÷ (10k+18k)) = 3,21V ✓ (ESP32 max = 3,3V → rezerva 0,09V)</span>
-<span style="color:#4a5060">Pôvodný delič 10k/20k dával 3,33V čo mierne presahovalo max ESP32 ADC!</span></div>
+<span style="color:#2dff7a">Výpočet: V_gpio = 5V × (10k ÷ (6,8k+10k)) = 2,97V ✓ (ESP32 max = 3,3V → rezerva 324mV)</span>
+<span style="color:#4a5060">Rezerva 324mV je 3,7× väčšia ako pri deličoch s tesnou hodnotou — ESP32 ADC je spoľahlivo chránené.</span></div>
 
   <hr class="div">
   <h3>2. Červená LED</h3>
@@ -279,7 +279,7 @@ Externý rezistor NIE JE potrebný.</span></div>
     <tr><th>Pin na MQ module</th><th>Pripojiť na</th><th>Poznámka</th></tr>
     <tr><td><code>VCC</code></td><td><strong>VIN (5V)</strong> na NodeMCU</td><td>Napájanie heater cievky aj obvodu</td></tr>
     <tr><td><code>GND</code></td><td><strong>GND</strong> na NodeMCU</td><td>Spoločná zem</td></tr>
-    <tr><td><code>AO</code></td><td>Cez delič 10kΩ/18kΩ → GPIO</td><td>⚠️ Vždy cez delič!</td></tr>
+    <tr><td><code>AO</code></td><td>Cez delič 6,8kΩ/10kΩ → GPIO</td><td>⚠️ Vždy cez delič!</td></tr>
     <tr><td><code>DO</code></td><td><strong>Nepripájajte</strong></td><td>Digitálny výstup – nepoužívame</td></tr>
   </table>
 </div>
@@ -377,9 +377,9 @@ const cppCode = String.raw`/*
  * ================================================================
  *
  *  ZAPOJENIE PINOV:
- *    GPIO 34  <-- MQ-2 AO  (cez delic 10kOhm / 18kOhm na GND)
- *    GPIO 35  <-- MQ-4 AO  (cez delic 10kOhm / 18kOhm na GND)
- *    GPIO 32  <-- MQ-5 AO  (cez delic 10kOhm / 18kOhm na GND)
+ *    GPIO 34  <-- MQ-2 AO  (cez delic 6,8kOhm / 10kOhm na GND)
+ *    GPIO 35  <-- MQ-4 AO  (cez delic 6,8kOhm / 10kOhm na GND)
+ *    GPIO 32  <-- MQ-5 AO  (cez delic 6,8kOhm / 10kOhm na GND)
  *    GPIO 26  --> Cervena LED  (cez 330 Ohm na GND)
  *    GPIO 25  --> BC547 Baza  (cez 1kOhm), Kolektor -> Repr(-) -> Repr(+) -> 5V
  *    GPIO 14  <-- Tlacidlo  (druhy pin na GND, INPUT_PULLUP v kode)

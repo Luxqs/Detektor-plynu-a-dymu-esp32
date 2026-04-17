@@ -9,9 +9,10 @@
  *
  * ----------------------------------------------------------------
  *  ZMENY v2.0 oproti v1.0 (na základe odbornej recenzie):
- *   [1] Delič napätia zmenený: 10kΩ/20kΩ → 10kΩ/18kΩ
+ *   [1] Delič napätia zmenený: 10kΩ/20kΩ → 6,8kΩ/10kΩ
  *       Dôvod: 10k/20k dáva 3.33V čo mierne presahuje max ESP32
- *       ADC vstupu (3.3V). Nová kombinácia dáva bezpečných 3.21V.
+ *       ADC vstupu (3.3V). Nová kombinácia dáva bezpečných 2.97V
+ *       s rezervou 324mV. Rezistory bežne dostupné v SK e-shopoch.
  *   [2] Pridané explicitné nastavenie ADC útlmu (11 dB)
  *       Dôvod: zaistí správne meranie v celom rozsahu 0–3.3V
  *   [3] Pridaný hardvérový watchdog timer (10 sekúnd)
@@ -31,8 +32,8 @@
  *     s manuálnou kalibráciou cez Serial Monitor sú postačujúce.
  *   – Dekoupling kondenzátory: na breadboarde nie sú nutné, prúdové
  *     špičky MQ senzorov sú dostatočne pomalé.
- *   – 100Ω sériový rezistor na ADC: opravený delič 10k/18k dáva
- *     bezpečné napätie, ďalšia ochrana nie je nutná.
+ *   – 100Ω sériový rezistor na ADC: delič 6,8k/10k dáva
+ *     bezpečné napätie 2.97V (rezerva 324mV), ďalšia ochrana nie je nutná.
  *
  * ================================================================
  *
@@ -44,17 +45,17 @@
  * ================================================================
  *
  *  ZAPOJENIE – prehľad pinov:
- *    MQ-x AO  →  delič (10kΩ/18kΩ)  →  GPIO 34 / 35 / 32
+ *    MQ-x AO  →  delič (6,8kΩ/10kΩ)  →  GPIO 34 / 35 / 32
  *
  *    DELIČ pre KAŽDÝ senzor zvlášť:
- *      MQ-x AO ──── 10kΩ ────┬──── GPIO (34 / 35 / 32)
- *                             │
- *                            18kΩ
- *                             │
- *                            GND
+ *      MQ-x AO ──── 6,8kΩ ────┬──── GPIO (34 / 35 / 32)
+ *                              │
+ *                             10kΩ
+ *                              │
+ *                             GND
  *
- *      Výpočet: 5V × (18k ÷ (10k+18k)) = 5 × 0.643 = 3.21V ✓
- *      (ESP32 ADC max = 3.3V → bezpečná rezerva 0.09V)
+ *      Výpočet: 5V × (10k ÷ (6,8k+10k)) = 5 × 0.595 = 2.97V ✓
+ *      (ESP32 ADC max = 3.3V → bezpečná rezerva 0.33V / 324mV)
  *
  *    LED (+)  →  330 Ohm  →  GPIO 26
  *    Tlačidlo →  GPIO 14  +  GND
